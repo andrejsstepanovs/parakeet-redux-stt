@@ -30,11 +30,19 @@ _client: AsyncOpenAI | None = None
 def _get_client() -> AsyncOpenAI | None:
     global _client
     if _client is None and LITELLM_API_KEY:
-        _client = AsyncOpenAI(
-            base_url=LITELLM_BASE_URL,
-            api_key=LITELLM_API_KEY,
-            timeout=POST_PROCESS_TIMEOUT,
-        )
+        try:
+            _client = AsyncOpenAI(
+                base_url=LITELLM_BASE_URL,
+                api_key=LITELLM_API_KEY,
+                timeout=POST_PROCESS_TIMEOUT,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Could not create the post-processing client (%s); keeping raw "
+                "transcripts",
+                exc,
+            )
+            return None
     return _client
 
 
@@ -84,6 +92,15 @@ async def postprocess_many(texts: list[str]) -> list[str]:
 
     async def _limited(text: str) -> str:
         async with semaphore:
-            return await postprocess_text(text)
+            try:
+                return await postprocess_text(text)
+            except Exception as exc:
+                # postprocess_text already handles its own failures; this guards
+                # against anything unexpected so a request never fails because
+                # of the optional cleanup step.
+                logger.warning(
+                    "Post-processing task failed (%s); keeping raw transcript", exc
+                )
+                return text
 
     return list(await asyncio.gather(*(_limited(text) for text in texts)))
