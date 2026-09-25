@@ -1,0 +1,11 @@
+# Run the published image from Docker Hub (no local build).
+#
+#   docker compose -f docker-compose.hub.yml up -d
+services:
+  stt2:
+    image: wormhit/parakeet-redux-stt:latest
+    container_name: stt2
+    env_file: .env
+    ports:
+      - "5093:5093"
+    restart: unless-stopped

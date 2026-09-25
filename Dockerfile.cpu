@@ -1,0 +1,71 @@
+# syntax=docker/dockerfile:1
+
+# Parakeet Redux (ternary) STT - standalone CPU Docker image
+#
+# The model weights are downloaded and bundled at build time, so the finished
+# image runs fully offline (HF_HUB_OFFLINE=1) and needs no volumes.
+#
+# The image is architecture-specific: this Dockerfile builds a linux/<arch>
+# image whose torch wheel matches the build host. Build on each target
+# architecture (or use `docker buildx --platform`) before pushing.
+#
+# NOTE: on aarch64 the default PyPI torch wheel bundles CUDA/cuDNN runtime
+# libraries, so the image is large even though only the CPU path is used.
+# Point torch at the CPU wheel index (see README) to shrink it.
+
+FROM python:3.12-slim
+
+LABEL description="Parakeet Redux ternary speech transcription service (standalone CPU)"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+RUN useradd --create-home --shell /bin/bash stt2
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY server.py .
+COPY stt2_service/ stt2_service/
+COPY templates/ templates/
+COPY parakeet.png .
+
+# Bundle the model so the image is standalone and works without network.
+#
+# Pass a Hugging Face token to speed up the download (higher rate limits) and
+# to reach gated repos, without baking it into the image:
+#   HF_TOKEN=hf_xxx docker compose build stt2
+# or:
+#   DOCKER_BUILDKIT=1 docker build --secret id=HF_TOKEN,env=HF_TOKEN -t parakeet-redux-stt:cpu -f Dockerfile.cpu .
+ARG STT2_BUNDLE_MODEL=moondream/parakeet-redux
+ENV HF_HOME=/app/models
+ENV HF_HUB_CACHE=/app/models
+ENV HF_HUB_DISABLE_SYMLINKS_WARNING=true
+RUN --mount=type=secret,id=HF_TOKEN,required=false \
+    if [ -s /run/secrets/HF_TOKEN ]; then export HF_TOKEN="$(cat /run/secrets/HF_TOKEN)"; fi; \
+    mkdir -p temp_uploads models && \
+    python -c "import moondream as md; md.photon('${STT2_BUNDLE_MODEL}', device='cpu').close()" && \
+    chown -R stt2:stt2 /app
+
+USER stt2
+
+# Weights are already present: never reach out to Hugging Face at runtime.
+ENV HF_HUB_OFFLINE=1
+ENV PYTHONUNBUFFERED=1
+# Photon's idle OpenMP workers otherwise spin on the cores its kernels use.
+ENV OMP_WAIT_POLICY=passive
+ENV STT2_DEVICE=cpu
+ENV STT2_PORT=5093
+
+EXPOSE 5093
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5093/healthz')" || exit 1
+
+CMD ["python", "server.py"]

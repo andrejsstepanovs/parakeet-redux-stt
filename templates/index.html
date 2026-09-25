@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parakeet Redux Transcription</title>
+    <style>
+        :root {
+            --bg: #0a0f1a;
+            --card: rgba(30, 41, 59, 0.7);
+            --border: rgba(148, 163, 184, 0.12);
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #34d399;
+            --accent2: #22d3ee;
+            --gradient: linear-gradient(135deg, #34d399 0%, #22d3ee 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 50% 0%, rgba(52, 211, 153, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(34, 211, 238, 0.10) 0%, transparent 50%);
+        }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem; }
+
+        header { text-align: center; margin-bottom: 2.5rem; }
+
+        .logo { display: inline-flex; align-items: center; gap: 16px; margin-bottom: 1rem; }
+
+        .logo img {
+            width: 72px; height: 72px; border-radius: 18px;
+            box-shadow: 0 0 30px rgba(52, 211, 153, 0.35);
+        }
+
+        h1 {
+            font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em;
+            background: var(--gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle { color: var(--muted); max-width: 640px; margin: 0 auto; }
+
+        .upload {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 3rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .25s, transform .25s, box-shadow .25s;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload:hover, .upload.dragover {
+            border-color: rgba(52, 211, 153, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .upload input { display: none; }
+        .upload .icon { font-size: 3.5rem; margin-bottom: 1rem; }
+        .upload .title { font-size: 1.2rem; font-weight: 600; margin-bottom: .35rem; }
+        .upload .hint { color: var(--muted); font-size: .9rem; }
+
+        #fileName {
+            margin-top: 1rem; padding: 6px 14px; border-radius: 10px;
+            background: rgba(52, 211, 153, 0.12); color: var(--accent);
+            font-family: ui-monospace, monospace; font-size: .85rem;
+            display: inline-block;
+        }
+
+        .controls { display: flex; gap: 1rem; justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+
+        select, button {
+            font-family: inherit; font-size: 1rem; border-radius: 12px;
+            border: 1px solid var(--border); padding: 12px 20px;
+        }
+
+        select { background: rgba(255, 255, 255, 0.05); color: var(--text); cursor: pointer; }
+        select:hover { border-color: var(--accent2); }
+
+        button.primary {
+            background: var(--gradient); color: #04141a; font-weight: 700;
+            border: none; cursor: pointer; transition: transform .2s, box-shadow .2s;
+        }
+
+        button.primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(52, 211, 153, 0.4); }
+        button.primary:disabled { opacity: .45; cursor: not-allowed; }
+
+        .progress { display: none; margin-bottom: 1.5rem; }
+        .bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+        .bar > i { display: block; height: 100%; width: 30%; background: var(--gradient); animation: slide 1.4s ease-in-out infinite; }
+        @keyframes slide { 0% { margin-left: -30%; } 100% { margin-left: 100%; } }
+
+        .metrics { display: flex; gap: 1.5rem; justify-content: center; margin-top: .9rem; color: var(--muted); font-size: .85rem; }
+        .metrics b { color: var(--text); }
+
+        .result {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 22px; overflow: hidden; display: none;
+        }
+
+        .result-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.2); gap: 1rem; flex-wrap: wrap;
+        }
+
+        .result-header .actions { display: flex; gap: .5rem; }
+
+        .btn-sm {
+            padding: 7px 14px; font-size: .85rem; border-radius: 9px;
+            background: rgba(255, 255, 255, 0.05); color: var(--text);
+            border: 1px solid var(--border); cursor: pointer;
+        }
+
+        .btn-sm:hover { border-color: var(--accent2); }
+
+        .segments { padding: 1.25rem; max-height: 520px; overflow-y: auto; display: flex; flex-direction: column; gap: .9rem; }
+
+        .segment { display: flex; gap: .9rem; }
+        .time { color: var(--accent); font-family: ui-monospace, monospace; font-size: .8rem; min-width: 96px; padding-top: 2px; }
+        .text { line-height: 1.55; }
+
+        .toast {
+            position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(120px);
+            background: #1e293b; border: 1px solid var(--accent); color: var(--text);
+            padding: 10px 22px; border-radius: 100px; z-index: 100; transition: transform .3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        footer { text-align: center; margin-top: 3rem; color: var(--muted); font-size: .85rem; }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="/parakeet.png" alt="Parakeet">
+                <h1>Parakeet Redux</h1>
+            </div>
+            <p class="subtitle">Ternary Parakeet TDT 0.6B — 25 languages, 178 MB weights, fast CPU transcription.</p>
+        </header>
+
+        <div class="upload" id="uploadArea">
+            <input type="file" id="fileInput" accept="audio/*,video/*">
+            <div class="icon">🎙️</div>
+            <div class="title">Drop audio or click to browse</div>
+            <div class="hint">WAV, FLAC, MP3, Ogg, Opus, M4A, MP4, MOV, WebM</div>
+            <div id="fileName" style="display:none;"></div>
+        </div>
+
+        <div class="progress" id="progress">
+            <div class="bar"><i></i></div>
+            <div class="metrics">
+                <span>CPU <b id="cpu">–</b></span>
+                <span>RAM <b id="ram">–</b></span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <select id="modelSelect">
+                <option value="moondream/parakeet-redux">parakeet-redux (ternary, CPU)</option>
+                <option value="moondream/parakeet-ultra">parakeet-ultra (full precision, GPU)</option>
+            </select>
+            <button class="primary" id="transcribeBtn" disabled>Transcribe</button>
+        </div>
+
+        <div class="result" id="result">
+            <div class="result-header">
+                <strong>Transcript</strong>
+                <div class="actions">
+                    <button class="btn-sm" id="copyBtn">Copy</button>
+                    <button class="btn-sm" id="txtBtn">TXT</button>
+                    <button class="btn-sm" id="srtBtn">SRT</button>
+                </div>
+            </div>
+            <div class="segments" id="segments"></div>
+        </div>
+
+        <footer>Parakeet Redux via Photon • OpenAI-compatible API at <code>/v1/audio/transcriptions</code></footer>
+    </div>
+
+    <div class="toast" id="toast">Done</div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const transcribeBtn = document.getElementById('transcribeBtn');
+        const result = document.getElementById('result');
+        const segmentsEl = document.getElementById('segments');
+        const progress = document.getElementById('progress');
+        const toast = document.getElementById('toast');
+
+        let current = null;
+        let metricsTimer = null;
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                onFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', () => fileInput.files[0] && onFile(fileInput.files[0]));
+
+        function onFile(file) {
+            fileName.textContent = file.name;
+            fileName.style.display = 'inline-block';
+            transcribeBtn.disabled = false;
+        }
+
+        transcribeBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            setBusy(true);
+            const form = new FormData();
+            form.append('file', file);
+            form.append('model', document.getElementById('modelSelect').value);
+            form.append('response_format', 'verbose_json');
+            form.append('timestamp_granularities[]', 'word');
+
+            try {
+                const response = await fetch('/v1/audio/transcriptions', { method: 'POST', body: form });
+                if (!response.ok) {
+                    const detail = await response.json().catch(() => ({}));
+                    throw new Error(detail.detail || response.statusText);
+                }
+                current = await response.json();
+                render(current);
+                showToast('Transcription complete');
+            } catch (err) {
+                showToast('Failed: ' + err.message);
+            } finally {
+                setBusy(false);
+            }
+        });
+
+        function setBusy(busy) {
+            transcribeBtn.disabled = busy;
+            progress.style.display = busy ? 'block' : 'none';
+            if (busy) {
+                metricsTimer = setInterval(async () => {
+                    try {
+                        const r = await fetch('/metrics');
+                        if (!r.ok) return;
+                        const m = await r.json();
+                        document.getElementById('cpu').textContent = Math.round(m.cpu_percent) + '%';
+                        document.getElementById('ram').textContent = Math.round(m.ram_percent) + '%';
+                    } catch (_) { /* ignore */ }
+                }, 500);
+            } else if (metricsTimer) {
+                clearInterval(metricsTimer);
+                metricsTimer = null;
+            }
+        }
+
+        function fmt(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${String(s).padStart(2, '0')}`;
+        }
+
+        function render(data) {
+            result.style.display = 'block';
+            segmentsEl.innerHTML = '';
+            const segs = data.segments && data.segments.length
+                ? data.segments
+                : [{ start: 0, end: 0, text: data.text }];
+            segs.forEach(seg => {
+                const row = document.createElement('div');
+                row.className = 'segment';
+                row.innerHTML = `<div class="time">${fmt(seg.start)}</div><div class="text"></div>`;
+                row.querySelector('.text').textContent = seg.text;
+                segmentsEl.appendChild(row);
+            });
+        }
+
+        function transcriptText() {
+            if (!current) return '';
+            if (current.segments && current.segments.length) {
+                return current.segments.map(s => s.text).join('\n');
+            }
+            return current.text || '';
+        }
+
+        function srtTime(seconds) {
+            const ms = Math.max(0, Math.round(seconds * 1000));
+            const h = String(Math.floor(ms / 3600000)).padStart(2, '0');
+            const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, '0');
+            const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+            return `${h}:${m}:${s},${String(ms % 1000).padStart(3, '0')}`;
+        }
+
+        function transcriptSrt() {
+            if (!current || !current.segments) return '';
+            return current.segments.map((seg, i) =>
+                `${i + 1}\n${srtTime(seg.start)} --> ${srtTime(seg.end)}\n${seg.text}\n`
+            ).join('\n');
+        }
+
+        function download(text, name) {
+            const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+            const a = document.createElement('a');
+            a.href = url; a.download = name; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(transcriptText());
+            showToast('Copied');
+        });
+        document.getElementById('txtBtn').addEventListener('click', () => download(transcriptText(), 'transcription.txt'));
+        document.getElementById('srtBtn').addEventListener('click', () => download(transcriptSrt(), 'transcription.srt'));
+
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+    </script>
+</body>
+
+</html>

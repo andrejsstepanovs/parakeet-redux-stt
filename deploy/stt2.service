@@ -1,0 +1,26 @@
+# Parakeet Redux STT - user systemd unit (no sudo required).
+#
+# Installed by deploy/install.sh into ~/.config/systemd/user/stt2.service.
+# It is a convenience wrapper around docker compose; boot persistence comes
+# from the container's "restart: unless-stopped" policy, so no root and no
+# lingering are required.
+#
+# Manage with:
+#   systemctl --user status stt2.service
+#   systemctl --user restart stt2.service
+
+[Unit]
+Description=Parakeet Redux STT service (docker compose, CPU)
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=__PROJECT_DIR__
+ExecStart=/usr/bin/docker compose up -d stt2
+ExecStop=/usr/bin/docker compose stop stt2
+ExecReload=/usr/bin/docker compose up -d --force-recreate stt2
+TimeoutStartSec=600
+TimeoutStopSec=120
+
+[Install]
+WantedBy=default.target

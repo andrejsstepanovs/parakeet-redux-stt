@@ -1,0 +1,10 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+models
+temp_uploads
+tests/fixtures
+.env
+.pytest_cache

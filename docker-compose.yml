@@ -1,0 +1,26 @@
+services:
+  stt2:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+      secrets:
+        - HF_TOKEN
+    image: parakeet-redux-stt:cpu
+    container_name: stt2
+    env_file: .env
+    environment:
+      STT2_DEVICE: "cpu"
+      STT2_PORT: "5093"
+    ports:
+      - "5093:5093"
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5093/healthz')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+secrets:
+  HF_TOKEN:
+    environment: HF_TOKEN
