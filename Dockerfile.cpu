@@ -5,6 +5,11 @@
 # The model weights are downloaded and bundled at build time, so the finished
 # image runs fully offline (HF_HUB_OFFLINE=1) and needs no volumes.
 #
+# Layer order is deliberate: dependencies, then the bundled weights, then the
+# app code. Changing a source file therefore only rebuilds/pushes the small
+# code layer -- the multi-GB dependency layer and the ~180 MB weight layer stay
+# cached and are not re-uploaded.
+#
 # The image is architecture-specific: this Dockerfile builds a linux/<arch>
 # image whose torch wheel matches the build host. Build on each target
 # architecture (or use `docker buildx --platform`) before pushing.
@@ -27,16 +32,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd --create-home --shell /bin/bash stt2
 WORKDIR /app
 
+# Dependencies first: this layer is only rebuilt when requirements.txt changes.
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-COPY server.py .
-COPY stt2_service/ stt2_service/
-COPY templates/ templates/
-COPY parakeet.png .
-
-# Bundle the model so the image is standalone and works without network.
+# Bundle the model so the image is standalone and works without network. This
+# runs before the app code is copied so code changes never invalidate it.
 #
 # Pass a Hugging Face token to speed up the download (higher rate limits) and
 # to reach gated repos, without baking it into the image:
@@ -50,8 +52,16 @@ ENV HF_HUB_DISABLE_SYMLINKS_WARNING=true
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -s /run/secrets/HF_TOKEN ]; then export HF_TOKEN="$(cat /run/secrets/HF_TOKEN)"; fi; \
     mkdir -p temp_uploads models && \
+    chown stt2:stt2 /app temp_uploads models && \
     python -c "import moondream as md; md.photon('${STT2_BUNDLE_MODEL}', device='cpu').close()" && \
-    chown -R stt2:stt2 /app
+    chown -R stt2:stt2 /app/models
+
+# App code last, ordered least- to most-frequently changed, so a source edit
+# only rebuilds the small layers after it.
+COPY --chown=stt2:stt2 server.py .
+COPY --chown=stt2:stt2 parakeet.png .
+COPY --chown=stt2:stt2 templates/ templates/
+COPY --chown=stt2:stt2 stt2_service/ stt2_service/
 
 USER stt2
 
