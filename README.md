@@ -42,7 +42,8 @@ stt2_service/
   main.py                     FastAPI app + lifespan
 templates/index.html          web UI
 Dockerfile.cpu                standalone CPU image (bundles model weights)
-docker-compose.yml            compose service "stt2"
+docker-compose.yml            compose service "stt2" (runs the published image)
+docker-compose.build.yml      build overlay for republishing the image
 deploy/install.sh             sudo-less installer
 deploy/stt2.service           per-user systemd unit
 tests/                        unit + API tests
@@ -80,8 +81,9 @@ cd ~/stt2
 ./deploy/install.sh
 ```
 
-The script builds the CPU image, creates `.env` from `.env.example` if missing,
-starts the container, waits for it to become healthy, and installs a **per-user**
+The script pulls the published CPU image (falling back to a local build),
+creates `.env` from `.env.example` if missing, starts the container, waits for
+it to become healthy, and installs a **per-user**
 systemd unit (`~/.config/systemd/user/stt2.service`). Nothing runs as root and
 no polkit rule is needed.
 
@@ -154,10 +156,10 @@ machine with the same CPU architecture:
 ```bash
 # Build. An authenticated Hugging Face download is faster; put HF_TOKEN=hf_xxx
 # in .env or pass it inline (it is a build secret, never baked into the image).
-HF_TOKEN=hf_xxx docker compose build stt2
+# The overlay tags the result as wormhit/parakeet-redux-stt:latest directly.
+HF_TOKEN=hf_xxx docker compose -f docker-compose.yml -f docker-compose.build.yml build stt2
 
-# Tag (this project publishes as wormhit/parakeet-redux-stt) and push.
-docker tag parakeet-redux-stt:cpu wormhit/parakeet-redux-stt:latest
+# Push (the build already tagged wormhit/parakeet-redux-stt:latest).
 docker login
 docker push wormhit/parakeet-redux-stt:latest
 

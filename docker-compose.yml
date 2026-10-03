@@ -1,11 +1,6 @@
 services:
   stt2:
-    build:
-      context: .
-      dockerfile: Dockerfile.cpu
-      secrets:
-        - HF_TOKEN
-    image: parakeet-redux-stt:cpu
+    image: wormhit/parakeet-redux-stt:latest
     container_name: stt2
     env_file: .env
     environment:
@@ -20,7 +15,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-
-secrets:
-  HF_TOKEN:
-    environment: HF_TOKEN

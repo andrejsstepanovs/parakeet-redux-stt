@@ -22,9 +22,9 @@ fi
 log "Stopping and removing the container"
 docker compose down || true
 
-read -r -p "Also remove the built image 'parakeet-redux-stt:cpu' (~6.5 GB)? [y/N] " answer
+read -r -p "Also remove the image 'wormhit/parakeet-redux-stt:latest' (~6.5 GB)? [y/N] " answer
 if [[ "${answer,,}" == "y" ]]; then
-  docker image rm parakeet-redux-stt:cpu >/dev/null 2>&1 || true
+  docker image rm wormhit/parakeet-redux-stt:latest >/dev/null 2>&1 || true
   log "Removed the image."
 fi
 

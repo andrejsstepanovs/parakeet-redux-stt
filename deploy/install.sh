@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # First-time installer for the Parakeet Redux STT service.
 #
-# Runs entirely without sudo: it builds the CPU image, starts the container and
-# installs a per-user systemd unit for convenient management. Boot persistence
-# comes from the container's "restart: unless-stopped" policy.
+# Runs entirely without sudo: it pulls the published CPU image, starts the
+# container and installs a per-user systemd unit for convenient management. Boot
+# persistence comes from the container's "restart: unless-stopped" policy.
 #
 #   ./deploy/install.sh
 #   STT2_PORT=5094 ./deploy/install.sh
@@ -43,19 +43,24 @@ if [[ ! -f .env ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Build and start
+# 3. Pull and start
 # ---------------------------------------------------------------------------
-log "Building the CPU image (first build can take several minutes)..."
-docker compose build "$COMPOSE_SERVICE"
+if docker compose pull "$COMPOSE_SERVICE"; then
+  log "Pulled the published image wormhit/parakeet-redux-stt:latest."
+else
+  warn "Could not pull the published image; building it from source instead."
+  log "Building the CPU image (first build can take several minutes)..."
+  docker compose -f docker-compose.yml -f docker-compose.build.yml build "$COMPOSE_SERVICE"
+fi
 
 log "Starting $COMPOSE_SERVICE..."
 docker compose up -d "$COMPOSE_SERVICE"
 
 # ---------------------------------------------------------------------------
-# 4. Wait for readiness (first start downloads ~171 MB of model weights)
+# 4. Wait for readiness (weights are bundled in the image)
 # ---------------------------------------------------------------------------
 if command -v curl >/dev/null 2>&1; then
-  log "Waiting for the service on port ${PORT} (first start downloads model weights)..."
+  log "Waiting for the service on port ${PORT}..."
   ready=0
   for ((i = 1; i <= WAIT_SECONDS; i++)); do
     if curl -sf "$HEALTH_URL" >/dev/null 2>&1; then

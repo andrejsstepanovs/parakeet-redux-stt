@@ -1,0 +1,17 @@
+# Build overlay: build the standalone CPU image from source and tag it as the
+# published image. Use together with the base file:
+#
+#   HF_TOKEN=hf_xxx docker compose -f docker-compose.yml -f docker-compose.build.yml build stt2
+#   docker push wormhit/parakeet-redux-stt:latest
+#
+services:
+  stt2:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+      secrets:
+        - HF_TOKEN
+
+secrets:
+  HF_TOKEN:
+    environment: HF_TOKEN
