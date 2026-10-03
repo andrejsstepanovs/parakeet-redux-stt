@@ -19,7 +19,9 @@ from .config import (
     POST_PROCESS,
     POST_PROCESS_CONCURRENCY,
     POST_PROCESS_MAX_CHARS,
+    POST_PROCESS_REASONING_EFFORT,
     POST_PROCESS_SYSTEM_PROMPT,
+    POST_PROCESS_TEMPERATURE,
     POST_PROCESS_TIMEOUT,
     logger,
 )
@@ -71,7 +73,8 @@ async def postprocess_text(text: str) -> str:
                 {"role": "system", "content": POST_PROCESS_SYSTEM_PROMPT},
                 {"role": "user", "content": text},
             ],
-            temperature=0.0,
+            temperature=POST_PROCESS_TEMPERATURE,
+            reasoning_effort=POST_PROCESS_REASONING_EFFORT,
             max_tokens=POST_PROCESS_MAX_CHARS,
         )
         corrected = (response.choices[0].message.content or "").strip()

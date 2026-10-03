@@ -160,6 +160,11 @@ LITELLM_BASE_URL = os.getenv(
 ).strip().rstrip("/")
 LITELLM_API_KEY = os.getenv("LITELLM_API_KEY", "").strip()
 LITELLM_MODEL = os.getenv("LITELLM_MODEL", "qwen").strip()
+POST_PROCESS_TEMPERATURE = _env_float("STT2_POST_PROCESS_TEMPERATURE", 0.4)
+_post_process_reasoning_effort = os.getenv(
+    "STT2_POST_PROCESS_REASONING_EFFORT", "low"
+).strip().lower()
+POST_PROCESS_REASONING_EFFORT = _post_process_reasoning_effort or None
 POST_PROCESS_TIMEOUT = _env_float("STT2_POST_PROCESS_TIMEOUT", 90.0, minimum=1.0)
 POST_PROCESS_MAX_CHARS = _env_int("STT2_POST_PROCESS_MAX_CHARS", 60_000)
 POST_PROCESS_CONCURRENCY = _env_int("STT2_POST_PROCESS_CONCURRENCY", 4)
